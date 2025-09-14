@@ -63,7 +63,7 @@ export function CustomerList({ customers, loading, onEditCustomer, onRefresh, on
     const statusMap = {
       normal: { label: "正常", className: "bg-primary-50 text-primary-700 border-primary-200" },
       cleared: { label: "清完", className: "bg-success-50 text-success-700 border-success-200" },
-      negotiating: { label: "谈帐", className: "bg-warning-50 text-warning-700 border-warning-200" },
+      negotiating: { label: "谈帐", className: "bg-amber-50 text-amber-700 border-amber-200" },
       bad_debt: { label: "烂账", className: "bg-error-50 text-error-700 border-error-200" },
       overdue: { label: "逾期", className: "bg-orange-50 text-orange-700 border-orange-200" },
     }
