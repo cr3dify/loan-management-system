@@ -31,7 +31,7 @@ export function LoginForm() {
 
     try {
       // 使用用户名登录（转换为邮箱格式）
-      const email = username === "admin" ? "tonyyam151@gmail.com" : `${username}@loanmanagement.com`
+      const email = username === "admin" ? "smgcommunityofficial@gmail.com" : `${username}@loanmanagement.com`
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
