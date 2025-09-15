@@ -24,9 +24,9 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
   const [formData, setFormData] = useState({
     amount: "",
     repayment_type: "partial_principal" as "interest_only" | "partial_principal" | "full_settlement",
-    payment_method: "cash" as "cash" | "bank_transfer" | "check" | "other",
     payment_date: new Date().toISOString().split("T")[0],
     notes: "",
+    loss_amount: "",
   })
 
   const [allocation, setAllocation] = useState({
@@ -125,27 +125,42 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
     setLoading(true)
 
     try {
+      // 简化版：只插入最基本的字段
       const repaymentData = {
         customer_id: selectedCustomer.id,
-        loan_id: selectedCustomer.id, // 简化处理，实际应该是贷款ID
+        loan_id: selectedCustomer.id,
         amount: Number.parseFloat(formData.amount),
-        principal_amount: allocation.principalPayment,
-        interest_amount: allocation.interestPayment,
-        penalty_amount: allocation.penaltyPayment,
-        remaining_principal: selectedCustomer.loan_amount - allocation.principalPayment,
-        payment_date: formData.payment_date,
+        principal_amount: allocation.principalPayment || 0,
+        interest_amount: allocation.interestPayment || 0,
+        penalty_amount: allocation.penaltyPayment || 0,
+        excess_amount: allocation.remainingAmount || 0,
         repayment_type: formData.repayment_type,
-        payment_method: formData.payment_method,
-        notes: formData.notes,
+        payment_date: formData.payment_date,
+        due_date: formData.payment_date,
+        notes: formData.notes || null
       }
 
-      const { error } = await supabase.from("repayments").insert([repaymentData])
+      console.log('🔍 准备插入的数据:', repaymentData)
+      
+      const { data, error } = await supabase
+        .from('repayments')
+        .insert(repaymentData)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('🚨 数据库插入失败:', error)
+        throw error
+      }
 
-      // 更新客户状态（如果全额结清）
-      if (formData.repayment_type === "full_settlement" || allocation.principalPayment >= selectedCustomer.loan_amount) {
-        await supabase.from("customers").update({ status: "cleared" }).eq("id", selectedCustomer.id)
+      console.log('✅ 还款记录添加成功:', data)
+
+      // 处理亏损金额（如果有）
+      if (formData.loss_amount && Number.parseFloat(formData.loss_amount) > 0) {
+        await supabase
+          .from("customers")
+          .update({ loss_amount: Number.parseFloat(formData.loss_amount) })
+          .eq("id", selectedCustomer.id)
       }
 
       onClose()
@@ -158,21 +173,21 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-xl font-semibold">添加还款记录</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 md:p-4 z-50 overflow-y-auto">
+      <Card className="w-full max-w-4xl my-4 md:my-8 max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden bg-white border border-gray-200 shadow-xl rounded-lg">
+        <CardHeader className="flex flex-row items-center justify-between p-3 md:p-6 bg-white border-b border-gray-200 sticky top-0 z-10">
+          <CardTitle className="text-base md:text-xl font-semibold text-gray-900 truncate pr-2">添加还款记录</CardTitle>
+          <Button variant="ghost" size="sm" onClick={onClose} className="shrink-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 min-w-[2rem] h-8">
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-3 md:p-6 bg-white overflow-y-auto flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 客户选择 */}
             {!initialCustomer && (
               <div>
-                <Label htmlFor="customer">选择客户 *</Label>
+                <Label htmlFor="customer" className="text-sm md:text-base text-gray-700 font-medium">选择客户 *</Label>
                 <select
                   id="customer"
                   value={selectedCustomer?.id || ""}
@@ -180,7 +195,7 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
                     const customer = customers.find((c) => c.id === e.target.value) // 修改为字符串比较
                     setSelectedCustomer(customer || null)
                   }}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-input"
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                   required
                 >
                   <option value="">请选择客户</option>
@@ -236,7 +251,7 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
                     <h3 className="text-lg font-medium">还款信息</h3>
 
                     <div>
-                      <Label htmlFor="amount">还款金额 (RM) *</Label>
+                      <Label htmlFor="amount" className="text-sm md:text-base text-gray-700 font-medium">还款金额 (RM) *</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -244,16 +259,17 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                         required
+                        className="mt-1 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="repayment_type">还款类型 *</Label>
+                      <Label htmlFor="repayment_type" className="text-sm md:text-base text-gray-700 font-medium">还款类型 *</Label>
                       <select
                         id="repayment_type"
                         value={formData.repayment_type}
                         onChange={(e) => setFormData({ ...formData, repayment_type: e.target.value as any })}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-input"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                         required
                       >
                         <option value="interest_only">只还利息</option>
@@ -262,39 +278,44 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
                       </select>
                     </div>
 
-                    <div>
-                      <Label htmlFor="payment_method">还款方式</Label>
-                      <select
-                        id="payment_method"
-                        value={formData.payment_method}
-                        onChange={(e) => setFormData({ ...formData, payment_method: e.target.value as any })}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-input"
-                      >
-                        <option value="cash">现金</option>
-                        <option value="bank_transfer">银行转账</option>
-                        <option value="check">支票</option>
-                        <option value="other">其他</option>
-                      </select>
-                    </div>
+
 
                     <div>
-                      <Label htmlFor="payment_date">还款日期 *</Label>
+                      <Label htmlFor="payment_date" className="text-sm md:text-base text-gray-700 font-medium">还款日期 *</Label>
                       <Input
                         id="payment_date"
                         type="date"
                         value={formData.payment_date}
                         onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
                         required
+                        className="mt-1 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="notes">备注</Label>
+                      <Label htmlFor="loss_amount" className="text-sm md:text-base text-gray-700 font-medium">
+                        亏损金额 (RM)
+                      </Label>
+                      <Input
+                        id="loss_amount"
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={formData.loss_amount}
+                        onChange={(e) => setFormData({ ...formData, loss_amount: e.target.value })}
+                        placeholder=""
+                        className="mt-1 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes" className="text-sm md:text-base text-gray-700 font-medium">备注</Label>
                       <Textarea
                         id="notes"
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         placeholder="还款备注信息"
+                        className="mt-1 min-h-[60px] bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                   </div>

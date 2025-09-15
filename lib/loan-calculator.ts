@@ -14,6 +14,7 @@ export interface LoanCalculationResult {
   targetAmount: number
 
   // 还款计算
+  optimalPeriods: number
   suggestedPayment: number
   totalRepayment: number
   principalPerPeriod: number
@@ -36,8 +37,6 @@ export interface LoanSummary {
   totalInterest: number
   totalPrincipal: number
   totalPayments: number
-  effectiveInterestRate: number
-  returnOnInvestment: number
 }
 
 export class LoanCalculator {
@@ -62,39 +61,43 @@ export class LoanCalculator {
     let totalRepayment = 0
     let principalPerPeriod = 0
     let interestPerPeriod = 0
+    
+    // 自动计算最佳还款期数
+    const optimalPeriods = this.calculateOptimalPeriods(loanAmount, principalRatePerPeriod)
+    const actualNumberOfPeriods = numberOfPeriods || optimalPeriods
 
     if (loanMethod === "scenario_a") {
       // 场景A：利息+押金（先扣息+押金）
       receivedAmount = loanAmount - interest - depositAmount
       targetAmount = loanAmount
 
-      if (principalRatePerPeriod > 0 && numberOfPeriods > 0) {
+      if (principalRatePerPeriod > 0 && actualNumberOfPeriods > 0) {
         principalPerPeriod = loanAmount * (principalRatePerPeriod / 100)
-        interestPerPeriod = interest / numberOfPeriods
+        interestPerPeriod = interest / actualNumberOfPeriods
         suggestedPayment = principalPerPeriod + interestPerPeriod
-        totalRepayment = suggestedPayment * numberOfPeriods - depositAmount
+        totalRepayment = suggestedPayment * actualNumberOfPeriods - depositAmount
       }
     } else if (loanMethod === "scenario_b") {
       // 场景B：只收利息（先扣息，无押金）
       receivedAmount = loanAmount - interest
       targetAmount = loanAmount
 
-      if (principalRatePerPeriod > 0 && numberOfPeriods > 0) {
+      if (principalRatePerPeriod > 0 && actualNumberOfPeriods > 0) {
         principalPerPeriod = loanAmount * (principalRatePerPeriod / 100)
-        interestPerPeriod = interest / numberOfPeriods
+        interestPerPeriod = interest / actualNumberOfPeriods
         suggestedPayment = principalPerPeriod + interestPerPeriod
-        totalRepayment = suggestedPayment * numberOfPeriods
+        totalRepayment = suggestedPayment * actualNumberOfPeriods
       }
     } else {
       // 场景C：只收押金（无利息，只收押金）
       receivedAmount = loanAmount - depositAmount
       targetAmount = loanAmount
 
-      if (numberOfPeriods > 0) {
-        principalPerPeriod = loanAmount / numberOfPeriods
+      if (actualNumberOfPeriods > 0) {
+        principalPerPeriod = loanAmount / actualNumberOfPeriods
         interestPerPeriod = 0 // 无利息
-        suggestedPayment = loanAmount / numberOfPeriods
-        totalRepayment = suggestedPayment * numberOfPeriods - depositAmount
+        suggestedPayment = loanAmount / actualNumberOfPeriods
+        totalRepayment = suggestedPayment * actualNumberOfPeriods - depositAmount
       }
     }
 
@@ -104,7 +107,7 @@ export class LoanCalculator {
       loanMethod,
       principalPerPeriod,
       interestPerPeriod,
-      numberOfPeriods,
+      numberOfPeriods: actualNumberOfPeriods,
     })
 
     // 计算汇总信息
@@ -120,6 +123,7 @@ export class LoanCalculator {
       interest,
       receivedAmount,
       targetAmount,
+      optimalPeriods,
       suggestedPayment,
       totalRepayment,
       principalPerPeriod,
@@ -180,19 +184,10 @@ export class LoanCalculator {
     const totalPrincipal = paymentSchedule.reduce((sum, item) => sum + item.principalPayment, 0)
     const totalPayments = paymentSchedule.reduce((sum, item) => sum + item.totalPayment, 0)
 
-    // 实际利率计算（基于到手金额）
-    const effectiveInterestRate = receivedAmount > 0 ? (totalInterest / receivedAmount) * 100 : 0
-
-    // 投资回报率计算（基于实际出资）
-    const actualInvestment = loanAmount - depositAmount
-    const returnOnInvestment = actualInvestment > 0 ? (totalInterest / actualInvestment) * 100 : 0
-
     return {
       totalInterest,
       totalPrincipal,
       totalPayments,
-      effectiveInterestRate,
-      returnOnInvestment,
     }
   }
 
@@ -277,5 +272,21 @@ export class LoanCalculator {
     }
 
     return errors
+  }
+
+  /**
+   * 计算最佳还款期数
+   * 基于每期本金比例自动计算合理的还款期数
+   */
+  private static calculateOptimalPeriods(loanAmount: number, principalRatePerPeriod: number): number {
+    if (principalRatePerPeriod <= 0) {
+      return 10 // 默认10期
+    }
+    
+    // 根据每期本金比例计算需要多少期才能还完本金
+    const periodsNeeded = Math.ceil(100 / principalRatePerPeriod)
+    
+    // 限制在合理范围内 (3-36期)
+    return Math.max(3, Math.min(36, periodsNeeded))
   }
 }

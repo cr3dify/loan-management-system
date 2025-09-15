@@ -34,7 +34,6 @@ export function CustomerForm({ customer, onClose }: CustomerFormProps) {
     approval_status: "pending" as "pending" | "approved" | "rejected",
     contract_signed: false,
     negotiation_terms: "",
-    loss_amount: "",
   })
 
   const [calculations, setCalculations] = useState({
@@ -89,7 +88,6 @@ export function CustomerForm({ customer, onClose }: CustomerFormProps) {
         approval_status: (customer as any).approval_status || "pending",
         contract_signed: (customer as any).contract_signed || false,
         negotiation_terms: (customer as any).negotiation_terms || "",
-        loss_amount: ((customer as any).loss_amount || 0).toString(),
       })
     }
   }, [customer])
@@ -185,7 +183,6 @@ export function CustomerForm({ customer, onClose }: CustomerFormProps) {
         approval_status: formData.approval_status,
         contract_signed: formData.contract_signed,
         negotiation_terms: formData.negotiation_terms,
-        loss_amount: Number.parseFloat(formData.loss_amount) || 0,
         // 添加贷款相关字段
         loan_amount: Number.parseFloat(formData.loan_amount) || 0,
         interest_rate: Number.parseFloat(formData.interest_rate) || 0,
@@ -406,21 +403,7 @@ export function CustomerForm({ customer, onClose }: CustomerFormProps) {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="loss_amount" className="text-sm md:text-base text-gray-700 font-medium">
-                    亏损金额 (RM)
-                  </Label>
-                  <Input
-                    id="loss_amount"
-                    type="number"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={formData.loss_amount}
-                    onChange={(e) => setFormData({ ...formData, loss_amount: e.target.value })}
-                    placeholder=""
-                    className="mt-1 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
+
 
                 <div>
                   <Label htmlFor="notes" className="text-sm md:text-base text-gray-700 font-medium">

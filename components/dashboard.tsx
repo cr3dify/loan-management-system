@@ -28,12 +28,13 @@ interface Customer {
 
 interface Repayment {
   id: string
+  customer_id: string
   amount: number
   payment_date: string
   repayment_type: string
   customer: {
     full_name: string
-  }
+  } | null // 明确指定外键后返回单个对象
 }
 
 interface Stats {
@@ -77,12 +78,20 @@ export function Dashboard() {
 
       if (customersError) throw customersError
 
-      // 获取还款记录
+      // 获取还款记录（明确指定外键关系）
       const { data: repayments, error: repaymentsError } = await supabase
         .from("repayments")
         .select(`
-          *,
-          customer:customers(full_name)
+          id,
+          customer_id,
+          amount,
+          principal_amount,
+          interest_amount,
+          penalty_amount,
+          payment_date,
+          repayment_type,
+          notes,
+          customer:customer_id(full_name)
         `)
         .order("payment_date", { ascending: false })
         .limit(5)
@@ -116,7 +125,7 @@ export function Dashboard() {
       })
 
       setRecentCustomers(customers?.slice(0, 5) || [])
-      setRecentRepayments(repayments?.slice(0, 5) || [])
+      setRecentRepayments((repayments as any)?.slice(0, 5) || [])
 
     } catch (error) {
       console.error("获取Dashboard数据失败:", error)
@@ -313,7 +322,9 @@ export function Dashboard() {
                         <Calendar className="w-4 h-4 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-neutral-800">{repayment.customer.full_name}</div>
+                        <div className="font-medium text-neutral-800">
+                          {(repayment.customer as any)?.[0]?.full_name || repayment.customer?.full_name || '未知客户'}
+                        </div>
                         <div className="text-sm text-neutral-500">
                           {new Date(repayment.payment_date).toLocaleDateString("zh-CN")}
                         </div>

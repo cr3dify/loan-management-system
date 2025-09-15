@@ -59,8 +59,8 @@ export interface Repayment {
   interest_amount?: number
   penalty_amount?: number
   excess_amount?: number
-  remaining_principal: number
-  payment_date: string // 统一字段名：repayment_date -> payment_date
+  // remaining_principal?: number // 临时移除这个字段
+  payment_date: string // 统一字段名：payment_date
   due_date: string
   repayment_type: "interest_only" | "partial_principal" | "full_settlement"
   payment_method: "cash" | "bank_transfer" | "check" | "other"

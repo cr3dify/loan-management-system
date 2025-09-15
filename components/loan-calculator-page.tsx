@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calculator, TrendingUp, DollarSign, Calendar, AlertCircle } from "lucide-react"
+import { Calculator, DollarSign, Calendar, AlertCircle } from "lucide-react"
 
 export function LoanCalculatorPage() {
   const [params, setParams] = useState<LoanCalculationParams>({
@@ -15,7 +15,6 @@ export function LoanCalculatorPage() {
     interestRate: 10,
     loanMethod: "scenario_a",
     depositAmount: 1000,
-    numberOfPeriods: 10,
     principalRatePerPeriod: 10,
   })
 
@@ -47,7 +46,7 @@ export function LoanCalculatorPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">贷款计算器</h1>
-        <p className="text-muted-foreground">精确计算贷款利息、还款计划和投资回报</p>
+        <p className="text-muted-foreground">精确计算贷款利息和还款计划</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -108,15 +107,7 @@ export function LoanCalculatorPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="numberOfPeriods">还款期数</Label>
-                <Input
-                  id="numberOfPeriods"
-                  type="number"
-                  value={params.numberOfPeriods}
-                  onChange={(e) => handleParamChange("numberOfPeriods", e.target.value)}
-                />
-              </div>
+
 
               <div>
                 <Label htmlFor="principalRatePerPeriod">每期本金比例 (%)</Label>
@@ -164,7 +155,7 @@ export function LoanCalculatorPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-primary">RM {result.receivedAmount.toLocaleString()}</div>
                       <div className="text-sm text-muted-foreground">到手现金</div>
@@ -172,6 +163,12 @@ export function LoanCalculatorPage() {
                     <div className="text-center">
                       <div className="text-2xl font-bold text-secondary">RM {result.interest.toLocaleString()}</div>
                       <div className="text-sm text-muted-foreground">利息金额</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {result.optimalPeriods}期
+                      </div>
+                      <div className="text-sm text-muted-foreground">最佳还款期数</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-accent">
@@ -189,37 +186,7 @@ export function LoanCalculatorPage() {
                 </CardContent>
               </Card>
 
-              {/* 投资分析 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    <span>投资分析</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-green-600">
-                        {result.summary.effectiveInterestRate.toFixed(2)}%
-                      </div>
-                      <div className="text-sm text-muted-foreground">实际利率</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-blue-600">
-                        {result.summary.returnOnInvestment.toFixed(2)}%
-                      </div>
-                      <div className="text-sm text-muted-foreground">投资回报率</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold text-purple-600">
-                        RM {result.summary.totalInterest.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-muted-foreground">总利息收入</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+
 
               {/* 还款计划 */}
               {result.paymentSchedule.length > 0 && (

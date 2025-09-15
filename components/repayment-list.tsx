@@ -98,8 +98,8 @@ export function RepaymentList({ repayments, loading, onRefresh }: RepaymentListP
                     <div className="font-medium">RM {(repayment.interest_amount || 0).toLocaleString()}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">剩余本金</div>
-                    <div className="font-medium">RM {repayment.remaining_principal.toLocaleString()}</div>
+                    <div className="text-muted-foreground">罚金</div>
+                    <div className="font-medium">RM {(repayment.penalty_amount || 0).toLocaleString()}</div>
                   </div>
                 </div>
 

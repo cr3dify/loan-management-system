@@ -25,12 +25,12 @@ export function RepaymentManagement() {
 
   const fetchData = async () => {
     try {
-      // 获取还款记录
+      // 获取还款记录（明确指定外键关系）
       const { data: repaymentData, error: repaymentError } = await supabase
         .from("repayments")
         .select(`
           *,
-          customer:customers(*)
+          customer:customer_id(full_name, customer_code)
         `)
         .order("payment_date", { ascending: false })
 
