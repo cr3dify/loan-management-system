@@ -53,10 +53,11 @@ export function RepaymentList({ repayments, loading, onRefresh }: RepaymentListP
             variant="outline"
             size="sm"
             onClick={onRefresh}
-            className="flex items-center space-x-2 bg-transparent"
+            disabled={loading}
+            className="flex items-center space-x-2 bg-transparent hover:bg-muted"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>刷新</span>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? '刷新中...' : '刷新'}</span>
           </Button>
         </div>
       </CardHeader>

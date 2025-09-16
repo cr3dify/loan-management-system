@@ -1,7 +1,7 @@
 import { useAuth } from "@/components/auth-provider"
 import { useMemo } from "react"
 
-export type UserRole = "admin" | "secretary" | "employee" | "super_admin"
+export type UserRole = "admin" | "secretary" | "employee"
 
 export interface PermissionRules {
   canEditCustomerStatus: boolean
@@ -9,6 +9,12 @@ export interface PermissionRules {
   canEditAllFields: boolean
   canViewReports: boolean
   canManageUsers: boolean
+  canViewOwnCustomers: boolean
+  canViewAllCustomers: boolean
+  canManageExpenses: boolean
+  canApproveRecords: boolean
+  canViewTeamPerformance: boolean
+  canAssignCustomers: boolean
 }
 
 /**
@@ -39,35 +45,59 @@ export function usePermissions(): PermissionRules & { userRole: UserRole | null;
       canEditAllFields: false,
       canViewReports: false,
       canManageUsers: false,
+      canViewOwnCustomers: false,
+      canViewAllCustomers: false,
+      canManageExpenses: false,
+      canApproveRecords: false,
+      canViewTeamPerformance: false,
+      canAssignCustomers: false,
     }
 
     switch (effectiveRole) {
-      case "super_admin":
       case "admin":
-        // 管理员和超级管理员拥有所有权限
+        // 管理员拥有所有权限
         rules.canEditCustomerStatus = true
         rules.canDeleteCustomer = true
         rules.canEditAllFields = true
         rules.canViewReports = true
         rules.canManageUsers = true
+        rules.canViewOwnCustomers = true
+        rules.canViewAllCustomers = true
+        rules.canManageExpenses = true
+        rules.canApproveRecords = true
+        rules.canViewTeamPerformance = true
+        rules.canAssignCustomers = true
         break
 
       case "secretary":
-        // 秘书拥有大部分权限，但不能删除客户
+        // 秘书：审核员工记录、录入费用、搜索所有客户
         rules.canEditCustomerStatus = true
         rules.canDeleteCustomer = false
         rules.canEditAllFields = true
         rules.canViewReports = true
         rules.canManageUsers = false
+        rules.canViewOwnCustomers = true
+        rules.canViewAllCustomers = true
+        rules.canManageExpenses = true
+        rules.canApproveRecords = true
+        rules.canViewTeamPerformance = false
+        rules.canAssignCustomers = true
         break
 
+
       case "employee":
-        // 员工以上（包括员工）可以编辑客户状态
+        // 员工：仅查看/维护自己客户，提交新客户及还款
         rules.canEditCustomerStatus = true
         rules.canDeleteCustomer = false
         rules.canEditAllFields = false
         rules.canViewReports = false
         rules.canManageUsers = false
+        rules.canViewOwnCustomers = true
+        rules.canViewAllCustomers = false
+        rules.canManageExpenses = true
+        rules.canApproveRecords = false
+        rules.canViewTeamPerformance = false
+        rules.canAssignCustomers = false
         break
 
       default:
@@ -78,7 +108,7 @@ export function usePermissions(): PermissionRules & { userRole: UserRole | null;
     return {
       ...rules,
       userRole: effectiveRole,
-      isEmployee: ["employee", "secretary", "admin", "super_admin"].includes(effectiveRole)
+      isEmployee: ["employee", "secretary", "admin"].includes(effectiveRole)
     }
   }, [user])
 

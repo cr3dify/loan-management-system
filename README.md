@@ -373,8 +373,8 @@ loan-management-system/
 
 ### ⭐ 如果这个项目对您有帮助，请给我们一个 Star
 
-[![GitHub stars](https://img.shields.io/github/stars/your-username/loan-management-system?style=social)](https://github.com/your-username/loan-management-system/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/your-username/loan-management-system?style=social)](https://github.com/your-username/loan-management-system/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/cr3dify/loan-management-system?style=social)](https://github.com/cr3dify/loan-management-system/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/cr3dify/loan-management-system?style=social)](https://github.com/cr3dify/loan-management-system/network/members)
 
 **让更多人发现这个项目！** 🚀
 

@@ -125,35 +125,49 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
     setLoading(true)
 
     try {
-      // 简化版：只插入最基本的字段
-      const repaymentData = {
+      console.log('🔍 开始处理还款记录:', {
         customer_id: selectedCustomer.id,
-        loan_id: selectedCustomer.id,
         amount: Number.parseFloat(formData.amount),
-        principal_amount: allocation.principalPayment || 0,
-        interest_amount: allocation.interestPayment || 0,
-        penalty_amount: allocation.penaltyPayment || 0,
-        excess_amount: allocation.remainingAmount || 0,
-        repayment_type: formData.repayment_type,
-        payment_date: formData.payment_date,
-        due_date: formData.payment_date,
-        notes: formData.notes || null
-      }
+        allocation
+      })
 
-      console.log('🔍 准备插入的数据:', repaymentData)
-      
-      const { data, error } = await supabase
-        .from('repayments')
-        .insert(repaymentData)
-        .select()
-        .single()
+      // 使用RPC函数处理还款，自动计算余额
+      const { data, error } = await supabase.rpc('process_repayment', {
+        p_customer_id: selectedCustomer.id,
+        p_loan_id: selectedCustomer.id, // 使用customer_id作为loan_id
+        p_amount: Number.parseFloat(formData.amount),
+        p_principal_amount: allocation.principalPayment || 0,
+        p_interest_amount: allocation.interestPayment || 0,
+        p_penalty_amount: allocation.penaltyPayment || 0,
+        p_excess_amount: allocation.remainingAmount || 0,
+        p_repayment_type: formData.repayment_type,
+        p_payment_date: formData.payment_date,
+        p_notes: formData.notes || null
+      })
 
       if (error) {
-        console.error('🚨 数据库插入失败:', error)
+        console.error('🚨 RPC函数调用失败:', error)
         throw error
       }
 
-      console.log('✅ 还款记录添加成功:', data)
+      const result = data?.[0]
+      if (result && result.success) {
+        console.log('✅ 还款处理成功:', result)
+        console.log('💰 新的剩余余额:', result.new_remaining_balance)
+        
+        // 显示成功消息，包含余额信息
+        alert(`还款成功！\n还款金额: RM ${Number.parseFloat(formData.amount).toLocaleString()}\n剩余余额: RM ${(result.new_remaining_balance || 0).toLocaleString()}`)
+        
+        // 更新本地客户数据
+        if (selectedCustomer) {
+          selectedCustomer.remaining_balance = result.new_remaining_balance || 0
+        }
+        
+        // 关闭表单
+        onClose()
+      } else {
+        throw new Error(result?.message || '还款处理失败')
+      }
 
       // 处理亏损金额（如果有）
       if (formData.loss_amount && Number.parseFloat(formData.loss_amount) > 0) {
@@ -162,11 +176,9 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
           .update({ loss_amount: Number.parseFloat(formData.loss_amount) })
           .eq("id", selectedCustomer.id)
       }
-
-      onClose()
     } catch (error) {
       console.error("保存还款记录失败:", error)
-      alert("保存失败，请重试")
+      alert(`保存失败：${error instanceof Error ? error.message : '请重试'}`)
     } finally {
       setLoading(false)
     }
@@ -229,6 +241,27 @@ export function RepaymentForm({ customer: initialCustomer, onClose }: RepaymentF
                     <div>
                       <div className="text-sm text-muted-foreground">利息比例</div>
                       <div className="font-medium">{selectedCustomer.interest_rate || 0}%</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">剩余余额</div>
+                      <div className="font-bold text-orange-600">RM {(selectedCustomer.remaining_balance || selectedCustomer.loan_amount || 0).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">客户状态</div>
+                      <div className="font-medium">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          selectedCustomer.status === 'normal' ? 'bg-green-100 text-green-800' :
+                          selectedCustomer.status === 'overdue' ? 'bg-orange-100 text-orange-800' :
+                          selectedCustomer.status === 'cleared' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {selectedCustomer.status === 'normal' ? '正常' :
+                           selectedCustomer.status === 'overdue' ? '逾期' :
+                           selectedCustomer.status === 'cleared' ? '清完' :
+                           selectedCustomer.status === 'negotiating' ? '谈账' :
+                           selectedCustomer.status === 'bad_debt' ? '烂账' : '未知'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

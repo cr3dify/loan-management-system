@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { usePermissions } from "@/hooks/use-permissions"
 import type { Customer } from "@/lib/types"
 import { CustomerList } from "./customer-list"
 import { CustomerForm } from "./customer-form"
@@ -14,6 +15,7 @@ export function CustomerManagement() {
   const [showForm, setShowForm] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const supabase = createClient()
+  const { canViewAllCustomers } = usePermissions()
 
   useEffect(() => {
     fetchCustomers()
@@ -21,7 +23,17 @@ export function CustomerManagement() {
 
   const fetchCustomers = async () => {
     try {
-      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false })
+      let query = supabase.from("customers").select("*")
+      
+      // 如果用户只能查看自己的客户，添加过滤条件
+      if (!canViewAllCustomers) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          query = query.eq("created_by", user.id)
+        }
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false })
 
       if (error) throw error
       

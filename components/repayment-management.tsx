@@ -24,6 +24,7 @@ export function RepaymentManagement() {
   }, [])
 
   const fetchData = async () => {
+    setLoading(true) // 添加加载状态
     try {
       // 获取还款记录（明确指定外键关系）
       const { data: repaymentData, error: repaymentError } = await supabase
@@ -49,6 +50,8 @@ export function RepaymentManagement() {
       setCustomers(customerData || [])
     } catch (error) {
       console.error("获取数据失败:", error)
+      // 可以添加错误提示
+      alert(`获取数据失败: ${error instanceof Error ? error.message : '请重试'}`)
     } finally {
       setLoading(false)
     }
@@ -62,7 +65,10 @@ export function RepaymentManagement() {
   const handleFormClose = () => {
     setShowForm(false)
     setSelectedCustomer(null)
-    fetchData()
+    // 延迟刷新，确保数据已保存
+    setTimeout(() => {
+      fetchData()
+    }, 500)
   }
 
   const filteredCustomers = customers.filter(

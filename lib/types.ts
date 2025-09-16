@@ -16,6 +16,7 @@ export interface Customer {
   periods: number
   principal_rate_per_period: number
   number_of_periods: number
+  remaining_balance: number // 剩余余额字段
   status: "normal" | "overdue" | "cleared" | "negotiating" | "bad_debt"
   notes?: string
   assigned_to?: string // UUID 字符串类型
@@ -107,11 +108,9 @@ export interface ContractTemplate {
 
 export interface User {
   id: string
-  username: string
-  full_name: string
+  name: string
   email: string
-  role: "admin" | "secretary" | "manager"
-  is_active: boolean
+  role: "admin" | "secretary" | "employee"
   created_at: string
   updated_at: string
 }
@@ -124,4 +123,60 @@ export interface SystemSetting {
   description?: string
   created_at: string
   updated_at: string
+}
+
+export interface ExpenseType {
+  id: string
+  name: string
+  description?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Expense {
+  id: string
+  employee_id: string
+  expense_type_id: string
+  amount: number
+  description: string
+  expense_date: string
+  receipt_url?: string
+  approval_status: "pending" | "approved" | "rejected"
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
+  created_at: string
+  updated_at: string
+  expense_type?: ExpenseType
+  employee?: User
+  approver?: User
+}
+
+export interface EmployeeProfit {
+  id: string
+  employee_id: string
+  period_year: number
+  period_month: number
+  total_loans: number
+  total_repayments: number
+  total_expenses: number
+  net_profit: number
+  roi_percentage: number
+  created_at: string
+  updated_at: string
+  employee?: User
+}
+
+export interface ApprovalRecord {
+  id: string
+  record_type: "customer" | "expense" | "repayment"
+  record_id: string
+  approver_id: string
+  approval_status: "pending" | "approved" | "rejected"
+  approval_level: number
+  comments?: string
+  approved_at: string
+  created_at: string
+  approver?: User
 }

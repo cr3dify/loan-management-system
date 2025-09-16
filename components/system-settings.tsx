@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { usePermissions } from "@/hooks/use-permissions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Settings, Save, RefreshCw } from "lucide-react"
+import { Settings, Save, RefreshCw, Shield, AlertCircle } from "lucide-react"
 
 interface SystemSetting {
   id: number
@@ -21,7 +22,9 @@ export function SystemSettings() {
   const [settings, setSettings] = useState<SystemSetting[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
   const supabase = createClient()
+  const { userRole, canManageUsers } = usePermissions()
 
   useEffect(() => {
     fetchSettings()
@@ -41,39 +44,53 @@ export function SystemSettings() {
   }
 
   const handleSettingChange = (key: string, value: string) => {
-    setSettings((prev) =>
-      prev.map((setting) => (setting.setting_key === key ? { ...setting, setting_value: value } : setting)),
-    )
+    setSettings((prev) => {
+      const updated = prev.map((setting) => 
+        setting.setting_key === key ? { ...setting, setting_value: value } : setting
+      )
+      setHasChanges(true)
+      return updated
+    })
   }
 
   const handleSave = async () => {
+    if (!canManageUsers) {
+      alert("您没有权限修改系统设置")
+      return
+    }
+
     setSaving(true)
     try {
+      // 批量更新设置
       const updates = settings.map((setting) => ({
         id: setting.id,
         setting_value: setting.setting_value,
       }))
 
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("system_settings")
-          .update({ setting_value: update.setting_value })
-          .eq("id", update.id)
+      // 使用事务批量更新
+      const { error } = await supabase
+        .from("system_settings")
+        .upsert(updates, { onConflict: 'id' })
 
-        if (error) throw error
-      }
+      if (error) throw error
 
-      alert("设置保存成功")
+      setHasChanges(false)
+      alert("设置保存成功！")
+      
+      // 重新获取最新数据
+      await fetchSettings()
     } catch (error) {
       console.error("保存设置失败:", error)
-      alert("保存失败，请重试")
+      alert(`保存失败：${error instanceof Error ? error.message : '请重试'}`)
     } finally {
       setSaving(false)
     }
   }
 
   const renderSettingInput = (setting: SystemSetting) => {
-    if (!setting.is_editable) {
+    const isEditable = setting.is_editable && canManageUsers
+    
+    if (!isEditable) {
       return <Input value={setting.setting_value} disabled className="bg-muted" />
     }
 
@@ -85,6 +102,7 @@ export function SystemSettings() {
             step="0.01"
             value={setting.setting_value}
             onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+            className="border-primary/20 focus:border-primary"
           />
         )
       case "boolean":
@@ -92,7 +110,7 @@ export function SystemSettings() {
           <select
             value={setting.setting_value}
             onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-md bg-input"
+            className="w-full px-3 py-2 border border-primary/20 rounded-md bg-input focus:border-primary"
           >
             <option value="true">是</option>
             <option value="false">否</option>
@@ -103,17 +121,44 @@ export function SystemSettings() {
           <Input
             value={setting.setting_value}
             onChange={(e) => handleSettingChange(setting.setting_key, e.target.value)}
+            className="border-primary/20 focus:border-primary"
           />
         )
     }
+  }
+
+  // 权限检查：只有管理员可以访问
+  if (!canManageUsers) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center justify-center text-center">
+              <Shield className="w-16 h-16 text-muted-foreground mb-4" />
+              <h2 className="text-2xl font-bold text-foreground mb-2">访问受限</h2>
+              <p className="text-muted-foreground mb-4">
+                您没有权限访问系统设置页面
+              </p>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <AlertCircle className="w-4 h-4" />
+                <span>需要管理员权限</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    )
   }
 
   return (
     <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">系统设置</h1>
-            <p className="text-muted-foreground">管理系统参数和配置</p>
+            <div className="flex items-center space-x-2 mb-2">
+              <Shield className="w-6 h-6 text-primary" />
+              <h1 className="text-3xl font-bold text-foreground">系统设置</h1>
+            </div>
+            <p className="text-muted-foreground">管理系统参数和配置（仅管理员）</p>
           </div>
           <div className="flex items-center space-x-4">
             <Button variant="outline" onClick={fetchSettings} disabled={loading}>
@@ -122,11 +167,11 @@ export function SystemSettings() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !hasChanges}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? "保存中..." : "保存设置"}
+              {saving ? "保存中..." : hasChanges ? "保存更改" : "保存设置"}
             </Button>
           </div>
         </div>
