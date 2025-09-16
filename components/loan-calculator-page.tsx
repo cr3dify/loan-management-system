@@ -237,7 +237,7 @@ export function LoanCalculatorPage() {
               <CardContent className="p-8 text-center">
                 <Calculator className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-muted-foreground mb-2">请输入计算参数</h3>
-                <p className="text-muted-foreground">填写左侧的贷款参数，然后点击"计算贷款"按钮查看详细结果</p>
+                <p className="text-muted-foreground">填写左侧的贷款参数，然后点击&ldquo;计算贷款&rdquo;按钮查看详细结果</p>
               </CardContent>
             </Card>
           )}

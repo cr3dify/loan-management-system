@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Button } from "@/components/ui/button"
@@ -29,11 +29,7 @@ export function AdvancedFinancialReports() {
   const supabase = createClient()
   const { canViewReports } = usePermissions()
 
-  useEffect(() => {
-    fetchReportData()
-  }, [selectedYear, selectedMonth, reportType])
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     setLoading(true)
     try {
       // 获取客户数据
@@ -71,7 +67,11 @@ export function AdvancedFinancialReports() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedYear, selectedMonth, reportType, supabase])
+
+  useEffect(() => {
+    fetchReportData()
+  }, [fetchReportData])
 
   const calculateReportData = (customers: any[], repayments: any[], expenses: any[]) => {
     const currentDate = new Date()
